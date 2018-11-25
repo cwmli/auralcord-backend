@@ -8,6 +8,7 @@ const auth_token = 'spotify_access_token';
 const ref_token = 'spotify_refresh_token';
 
 module.exports = function(app) {
+  
   app.get('/signin', function(req, res) {
 
     var state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -61,7 +62,7 @@ module.exports = function(app) {
             maxAge: 2147483647000
           });
 
-          res.redirect('http://localhost:8080/');
+          res.redirect('http://localhost:8080/profile');
         } else {
           res.redirect('http://localhost:8080/?' +
             querystring.stringify({

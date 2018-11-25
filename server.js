@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000;
 app.use(cookieParser());
 
 // Routes
-const spotifyEndpoint = require('./api/routes/spotifyEndpoint');
+const spotifyEndpoint = require('./api/routes/spotify');
 
 spotifyEndpoint(app);
 
