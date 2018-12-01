@@ -1,18 +1,16 @@
 'use strict'
 
+var constants = require('./helper.js');
+
 const querystring = require('querystring');
 const request = require('request');
-
-const auth_key = 'spotify_auth_state';
-const auth_token = 'spotify_access_token';
-const ref_token = 'spotify_refresh_token';
 
 module.exports = function(app) {
   
   app.get('/signin', function(req, res) {
 
     var state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    res.cookie(auth_key, state);
+    res.cookie(constants.auth_key, state);
 
     res.redirect('https://accounts.spotify.com/authorize?' +
       querystring.stringify({
@@ -28,7 +26,7 @@ module.exports = function(app) {
 
     var code        = req.query.code || null;
     var state       = req.query.state || null;
-    var cookieState = req.cookies ? req.cookies[auth_key] : null;
+    var cookieState = req.cookies ? req.cookies[constants.auth_key] : null;
 
     if (state == null || state !== cookieState) {
       res.redirect('http://localhost:8080/?' +
@@ -37,7 +35,7 @@ module.exports = function(app) {
           message: 'invalid_spotify_auth_state'
         }));
     } else {
-      res.clearCookie(auth_key);
+      res.clearCookie(constants.auth_key);
 
       request.post({
         url: 'https://accounts.spotify.com/api/token',
@@ -55,10 +53,10 @@ module.exports = function(app) {
           var refresh_token  = body.refresh_token;
           var access_expires = +body.expires_in;
 
-          res.cookie(auth_token, access_token, {
+          res.cookie(constants.auth_token, access_token, {
             maxAge: access_expires * 1000
           });
-          res.cookie(ref_token, refresh_token, {
+          res.cookie(constants.ref_token, refresh_token, {
             maxAge: 2147483647000
           });
 
@@ -76,7 +74,7 @@ module.exports = function(app) {
 
   app.get('/signinrefresh', function(req, res) {
 
-    var refresh_token = req.cookies ? req.cookies[ref_token] : null;
+    var refresh_token = req.cookies ? req.cookies[constants.ref_token] : null;
 
     if (refresh_token != null) {
 
