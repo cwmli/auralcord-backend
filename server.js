@@ -7,13 +7,13 @@ const port = process.env.PORT || 5000;
 
 app.use(cookieParser());
 
-// Routes
-const spotifyEndpoint = require('./api/routes/spotify');
-
-spotifyEndpoint(app);
-
-app.get('/api/hello', (req, res) => {
-  res.send({ express: 'Hello From Express' });
+app.use(function(req, res, next) {
+  console.log('%s %s', req.method, req.url);
+  next();
 });
+// Main Routes
+const spotifyEndpoints = require('./api/routes/spotify');
+
+app.use('/spotify', spotifyEndpoints);
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

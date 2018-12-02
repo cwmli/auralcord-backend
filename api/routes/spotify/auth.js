@@ -1,13 +1,13 @@
 'use strict'
 
-var constants = require('./helper.js');
-
 const querystring = require('querystring');
 const request = require('request');
 
-module.exports = function(app) {
+const constants = require('./helper.js');
+
+module.exports = function(router) {
   
-  app.get('/signin', function(req, res) {
+  router.get('/signin', function(req, res) {
 
     var state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     res.cookie(constants.auth_key, state);
@@ -22,7 +22,7 @@ module.exports = function(app) {
       }));
   });
 
-  app.get('/signincallback', function(req, res) {
+  router.get('/signincallback', function(req, res) {
 
     var code        = req.query.code || null;
     var state       = req.query.state || null;
@@ -72,7 +72,7 @@ module.exports = function(app) {
     }
   });
 
-  app.get('/signinrefresh', function(req, res) {
+  router.get('/signinrefresh', function(req, res) {
 
     var refresh_token = req.cookies ? req.cookies[constants.ref_token] : null;
 
