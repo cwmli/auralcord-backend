@@ -98,14 +98,14 @@ module.exports = function(router) {
             access_expires_in: access_expires
           })
         } else {
-          res.send({
+          res.status(401).send({
             success: false,
             message: 'invalid_spotify_refresh_token'
           })
         }
       });
     } else {
-      res.send({
+      res.status(400).send({
         success: false,
         message: 'missing_spotify_refresh_token'
       })

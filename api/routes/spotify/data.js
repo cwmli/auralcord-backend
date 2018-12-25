@@ -14,7 +14,8 @@ module.exports = function(router) {
     }, function(err, response, body) {
       if (!err && response.statusCode == 200) {
         res.send({
-          success: true
+          success: true,
+          data: {}
           // some other payload here
         })
       } else {
