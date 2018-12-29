@@ -1,5 +1,6 @@
 'use strict'
 
+const querystring = require('querystring');
 const request = require('request');
 
 module.exports = function(router) {
@@ -11,7 +12,7 @@ module.exports = function(router) {
       url: 'https://api.spotify.com/v1/me',
       headers: { 'Authorization': 'Bearer ' + auth },
       json: true
-    }, function(err, response, body) {
+    }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
         res.send({
           success: true,
@@ -20,7 +21,7 @@ module.exports = function(router) {
       } else {
         res.send({
           success: false,
-          message: 'error_retrieving_user'
+          message: 'error_retrieving_user_profile'
         });
       }
     });
@@ -33,16 +34,60 @@ module.exports = function(router) {
       url: 'https://api.spotify.com/v1/me/playlists',
       headers: { 'Authorization': 'Bearer ' + auth },
       json: true
-    }, function(err, response, body) {
+    }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
         res.send({
-          success: true
-          // some other payload here
+          success: true,
+          data: body
         })
       } else {
         res.send({
           success: false,
           message: 'error_retrieving_user_playlists'
+        });
+      }
+    });
+  });
+
+  router.get('/top/artists', function(req, res) {
+    var auth = res.locals.auth;
+
+    request.get({
+      url: 'https://api.spotify.com/v1/me/top/artists' + querystring.stringify(req.query),
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        res.send({
+          success: true,
+          data: body
+        })
+      } else {
+        res.send({
+          success: false,
+          message: 'error_retrieving_user_top_artists'
+        });
+      }
+    });
+  });
+
+  router.get('/top/tracks', function(req, res) {
+    var auth = res.locals.auth;
+
+    request.get({
+      url: 'https://api.spotify.com/v1/me/top/tracks' + querystring.stringify(req.query),
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        res.send({
+          success: true,
+          data: body
+        })
+      } else {
+        res.send({
+          success: false,
+          message: 'error_retrieving_user_top_tracks'
         });
       }
     });

@@ -60,7 +60,7 @@ module.exports = function(router) {
             maxAge: 2147483647000
           });
 
-          res.redirect('http://localhost:8080/profile');
+          res.redirect('http://localhost:8080/dashboard');
         } else {
           res.redirect('http://localhost:8080/?' +
             querystring.stringify({
