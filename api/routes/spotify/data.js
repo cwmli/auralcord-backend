@@ -58,9 +58,15 @@ module.exports = function(router) {
       json: true
     }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
+        body.items.map((artist) => {
+          artist.image = artist.images[0];
+          delete artist['images'];
+          return artist;
+        });
+
         res.send({
           success: true,
-          data: body
+          data: { artists: body.items, next: body.next }
         })
       } else {
         res.send({
@@ -82,7 +88,7 @@ module.exports = function(router) {
       if (!err && response.statusCode == 200) {
         res.send({
           success: true,
-          data: body
+          data: { tracks: body.items, next: body.next }
         })
       } else {
         res.send({
