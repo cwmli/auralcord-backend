@@ -49,6 +49,28 @@ module.exports = function(router) {
     });
   });
 
+  router.get('/playlist/:id', function(req, res) {
+    var auth = res.locals.auth;
+
+    request.get({
+      url: 'https://api.spotify.com/v1/playlists/' + req.params.id,
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        res.send({
+          success: true,
+          data: body
+        })
+      } else {
+        res.send({
+          success: false,
+          message: 'error_retrieving_requested_playlist'
+        });
+      }
+    });
+  });
+
   router.get('/top/artists', function(req, res) {
     var auth = res.locals.auth;
 
