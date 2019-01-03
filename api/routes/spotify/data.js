@@ -71,6 +71,32 @@ module.exports = function(router) {
     });
   });
 
+  router.get('/track-features', function(req, res) {
+    var auth = res.locals.auth;
+
+    var query = Object.assign({}, req.query, {
+      ids: req.query.ids.join(',')
+    });
+    
+    request.get({
+      url: 'https://api.spotify.com/v1/audio-features/?' + querystring.stringify(query),
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        res.send({
+          success: true,
+          data: body
+        })
+      } else {
+        res.send({
+          success: false,
+          message: 'error_retrieving_track_features_for_ids'
+        });
+      }
+    });    
+  });
+
   router.get('/top/artists', function(req, res) {
     var auth = res.locals.auth;
 
