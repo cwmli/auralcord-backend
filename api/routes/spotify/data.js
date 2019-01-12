@@ -84,9 +84,21 @@ module.exports = function(router) {
       json: true
     }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
+        // flatten out the data
+        let flattened_data = {};
+        for (var i = 0; i < body.audio_features.length; ++i) {
+          for (var feature in body.audio_features[i]) {
+            if (body.audio_features[i].hasOwnProperty(feature) && flattened_data.hasOwnProperty(feature)) {
+              flattened_data[feature].push(body.audio_features[i][feature]);
+            } else {
+              flattened_data[feature] = [body.audio_features[i][feature]];
+            }
+          }
+        }
+
         res.send({
           success: true,
-          data: body
+          data: flattened_data
         })
       } else {
         res.send({
