@@ -10,7 +10,7 @@ module.exports = function(router) {
   router.get('/signin', function(req, res) {
 
     var state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    res.cookie(constants.auth_key, state);
+    req.session.auth_state = state;
 
     res.redirect('https://accounts.spotify.com/authorize?' +
       querystring.stringify({
@@ -22,20 +22,20 @@ module.exports = function(router) {
       }));
   });
 
-  router.get('/signincallback', function(req, res) {
+  router.get('/signin/callback', function(req, res) {
 
     var code        = req.query.code || null;
     var state       = req.query.state || null;
-    var cookieState = req.cookies ? req.cookies[constants.auth_key] : null;
+    var ogState = req.session.auth_state ? req.session.auth_state : null;
 
-    if (state == null || state !== cookieState) {
+    if (state == null || state !== ogState) {
       res.redirect('http://localhost:8080/?' +
         querystring.stringify({
           success: false,
           message: 'invalid_spotify_auth_state'
         }));
     } else {
-      res.clearCookie(constants.auth_key);
+      req.session.auth_state = null;
 
       request.post({
         url: 'https://accounts.spotify.com/api/token',
@@ -53,6 +53,7 @@ module.exports = function(router) {
           var refresh_token  = body.refresh_token;
           var access_expires = +body.expires_in;
 
+          // Store into the DB here
           res.cookie(constants.auth_token, access_token, {
             maxAge: access_expires * 1000
           });
@@ -72,7 +73,7 @@ module.exports = function(router) {
     }
   });
 
-  router.get('/signinrefresh', function(req, res) {
+  router.get('/signin/refresh', function(req, res) {
 
     var refresh_token = req.cookies ? req.cookies[constants.ref_token] : null;
 

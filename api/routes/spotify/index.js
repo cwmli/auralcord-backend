@@ -17,7 +17,7 @@ router.use(function authCheck(req, res, next) {
 
     if (auth == null) {
       request.get({
-        url: 'http://localhost:5000/spotify/signinrefresh',
+        url: 'http://localhost:5000/spotify/signin/refresh',
         headers: req.headers,
         json: true
       }, function(err, response, body) {
@@ -26,7 +26,7 @@ router.use(function authCheck(req, res, next) {
           auth = body.access_token;
 
           res.cookie(constants.auth_token, auth, {
-            maxAge: access_expires * 1000
+            maxAge: access_expires
           });
           
         }
