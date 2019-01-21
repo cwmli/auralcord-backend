@@ -27,7 +27,7 @@ app.use(function(req, res, next) {
 app.options('/*', cors(corsOptions));
 
 // Main Routes
-const spotifyEndpoints = require('./api/routes/spotify');
+const spotifyEndpoints = require('./routes/spotify');
 
 app.use('/spotify', spotifyEndpoints);
 

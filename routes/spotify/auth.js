@@ -3,9 +3,9 @@
 const querystring = require('querystring');
 const request = require('request');
 
-const constants = require('./helper.js');
+const constants = require('./constants.js');
 
-const User = require('../../../models').User;
+const User = require('../../models').User;
 
 module.exports = function(router) {
   
@@ -49,7 +49,7 @@ module.exports = function(router) {
           redirect_uri: global.gConfig.SPOTIFY_REDIRECT_URI
         },
         json: true
-      }, function(err, response, body) {
+      }, (err, response, body) => {
         if (!err && response.statusCode == 200) {
           var access_token   = body.access_token;
           var refresh_token  = body.refresh_token;
@@ -72,8 +72,11 @@ module.exports = function(router) {
                   displayName: body.display_name,
                   refreshToken: refresh_token
                 }
+              }).spread((user, _created) => {
+                req.session.user_id = user.dataValues.spotifyId;
+                req.session.save();
               });
-              
+
               res.redirect('http://localhost:8080/dashboard');
             } else {
               res.redirect('http://localhost:8080/?' +
@@ -96,17 +99,17 @@ module.exports = function(router) {
 
   router.get('/signin/refresh', function(req, res) {
 
-    var refresh_token = req.cookies ? req.cookies[constants.ref_token] : null;
-
-    if (refresh_token != null) {
-
+    User.findOne({
+      where: {spotifyId: req.session.user_id},
+      attributes: ['refreshToken']
+    }).then((user) => {
       request.post({
         url: 'https://accounts.spotify.com/api/token',
         form: {
           client_id: global.gConfig.SPOTIFY_CLIENT_ID,
           client_secret: global.gConfig.SPOTIFY_SECRET,
           grant_type: 'refresh_token',
-          refresh_token: refresh_token
+          refresh_token: user.dataValues.refreshToken
         },
         json: true
       }, function(err, response, body) {
@@ -126,11 +129,6 @@ module.exports = function(router) {
           })
         }
       });
-    } else {
-      res.status(400).send({
-        success: false,
-        message: 'missing_spotify_refresh_token'
-      })
-    }
+    });
   })
 }
