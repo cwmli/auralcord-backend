@@ -10,6 +10,7 @@ const Config = {
 global.gConfig = Config;
 
 module.exports.sessionConf = {
+  key: 'user_sid',
   secret: process.env.SESSION_SECRET,
   saveUninitialized: false,
   resave: false

@@ -5,6 +5,8 @@ const request = require('request');
 
 const constants = require('./helper.js');
 
+const User = require('../../../models').User;
+
 module.exports = function(router) {
   
   router.get('/signin', function(req, res) {
@@ -53,15 +55,34 @@ module.exports = function(router) {
           var refresh_token  = body.refresh_token;
           var access_expires = +body.expires_in;
 
-          // Store into the DB here
           res.cookie(constants.auth_token, access_token, {
-            maxAge: access_expires * 1000
-          });
-          res.cookie(constants.ref_token, refresh_token, {
-            maxAge: 2147483647000
+            maxAge: access_expires
           });
 
-          res.redirect('http://localhost:8080/dashboard');
+          request.get({
+            url: 'https://api.spotify.com/v1/me',
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+          }, (err, response, body) => {
+            if (!err && response.statusCode == 200) {
+
+              User.findOrCreate({
+                where: {spotifyId: body.id}, 
+                defaults: {
+                  displayName: body.display_name,
+                  refreshToken: refresh_token
+                }
+              });
+              
+              res.redirect('http://localhost:8080/dashboard');
+            } else {
+              res.redirect('http://localhost:8080/?' +
+              querystring.stringify({
+                success: false,
+                message: ''
+              }));
+            }
+          });
         } else {
           res.redirect('http://localhost:8080/?' +
             querystring.stringify({
