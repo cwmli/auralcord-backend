@@ -2,10 +2,13 @@ const auralcordConf = require('./config/auralcord');
 
 const express = require('express');
 const session = require('express-session');
+const RedisStore = require('connect-redis')(session);
+const redis = require('redis');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
 const app = express();
+const redisClient = redis.createClient();
 const port = process.env.PORT || 5000;
 
 /* CORS Setup*/
@@ -16,8 +19,11 @@ const corsOptions = {
 }
 app.use(cors(corsOptions));
 
-/* Session and Grant Setup */
-app.use(session(auralcordConf.sessionConf));
+/* Session Setup */
+app.use(
+  session(Object.assign(auralcordConf.sessionConf, 
+    { store: new RedisStore({client: redisClient}) }
+  )));
 
 app.use(cookieParser());
 app.use(function(req, res, next) {
