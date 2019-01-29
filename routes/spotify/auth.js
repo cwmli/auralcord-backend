@@ -73,7 +73,11 @@ module.exports = function(router) {
                   refreshToken: refresh_token
                 }
               }).spread((user, _created) => {
-                req.session.user_id = user.dataValues.spotifyId;
+                if (user.getDataValue('refreshToken') == null) {
+                  user.update({refreshToken: refresh_token});
+                }
+
+                req.session.user_id = user.getDataValue('spotifyId');
                 req.session.save();
               });
 
@@ -96,39 +100,4 @@ module.exports = function(router) {
       });
     }
   });
-
-  router.get('/signin/refresh', function(req, res) {
-
-    User.findOne({
-      where: {spotifyId: req.session.user_id},
-      attributes: ['refreshToken']
-    }).then((user) => {
-      request.post({
-        url: 'https://accounts.spotify.com/api/token',
-        form: {
-          client_id: global.gConfig.SPOTIFY_CLIENT_ID,
-          client_secret: global.gConfig.SPOTIFY_SECRET,
-          grant_type: 'refresh_token',
-          refresh_token: user.dataValues.refreshToken
-        },
-        json: true
-      }, function(err, response, body) {
-        if (!err && response.statusCode == 200) {
-          var access_token   = body.access_token;
-          var access_expires = body.expires_in;
-
-          res.send({
-            success: true,
-            access_token: access_token,
-            access_expires_in: access_expires
-          })
-        } else {
-          res.status(401).send({
-            success: false,
-            message: 'invalid_spotify_refresh_token'
-          })
-        }
-      });
-    });
-  })
 }
