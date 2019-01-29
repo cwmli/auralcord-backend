@@ -1,9 +1,25 @@
-const Config = {
-  SPOTIFY_CLIENT_ID: 'aa71a911355b47dcb387ba6f4abcd08d',
-  SPOTIFY_SECRET: '9aa021bb9fbe4efa9ff99fa098ed122d',
-  SPOTIFY_REDIRECT_URI: 'http://localhost:5000/spotify/signincallback',
-  SPOTIFY_SCOPES: 'user-top-read user-read-recently-played playlist-read-private playlist-read-collaborative',
-  AURALCORD_CLIENT: 'http://localhost:8080'
-}
+require('dotenv').config();
 
-global.gConfig = Config;
+module.exports = {
+  development: {
+    username: "auralcordadmin",
+    password: "auralcord",
+    database: "auralcord_dev",
+    host: "127.0.0.1",
+    dialect: "postgres"
+  },
+  test: {
+    username: "auralcordadmin",
+    password: "auralcord",
+    database: "auralcord_test",
+    host: "127.0.0.1",
+    dialect: "postgres"
+  },
+  production: {
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    dialect: "postgres"
+  }
+}
