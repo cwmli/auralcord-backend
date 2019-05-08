@@ -3,6 +3,33 @@
 const querystring = require('querystring');
 const request = require('request');
 
+function fetchPagingObj(auth, url, obj) {
+  return new Promise((resolve, reject) => {
+    request.get({
+      url: url,
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        obj = obj.concat(body.items);
+        resolve({data: obj, next: body.next});
+      } else {
+        resolve({data: obj, next: null});
+      }
+    });
+  });
+}
+
+function recursiveFetchPagedItems(auth, url, obj) {
+  return fetchPagingObj(auth, url, obj).then((res) => {
+    if (res.next == null) {
+      return res.data;
+    } else {
+      return recursiveFetchPagedItems(auth, res.next, res.data);
+    }
+  })
+}
+
 module.exports = function(router) {
   
   router.get('/profile', function(req, res) {
@@ -58,11 +85,15 @@ module.exports = function(router) {
       json: true
     }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
-        
-        res.send({
-          success: true,
-          data: body
-        })
+        var tracks = body.tracks.items;
+        recursiveFetchPagedItems(auth, body.tracks.next, tracks).then((result) => {
+          body.tracks.items = result;
+          res.send({
+            success: true,
+            data: body
+          });
+        });
+
       } else {
         res.send({
           success: false,
