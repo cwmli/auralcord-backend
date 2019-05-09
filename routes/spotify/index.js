@@ -3,7 +3,8 @@
 const express = require('express');
 
 var router = express.Router();
-const profileRoutes = require('./data.js');
+const profileRoutes = require('./profile.js');
+const dataRoutes = require('./data.js');
 const authRoutes = require('./auth.js');
 const refreshChecker = require('./refresh.js');
 
@@ -13,5 +14,6 @@ authRoutes(router)
 router.use(refreshChecker);
 
 profileRoutes(router);
+dataRoutes(router);
 
 module.exports = router;
