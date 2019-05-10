@@ -1,53 +1,69 @@
 'use strict'
 
+/*
+  General endpoints to query non-personalized information such as playlist, 
+  tracks, and track features
+ */
+
 const querystring = require('querystring');
 const request = require('request');
 
+const CHUNK_SIZE = 100;
+
+function fetchAllPagedItems(auth, url, obj) {
+  return new Promise((resolve, reject) => {
+    request.get({
+      url: url,
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        obj = obj.concat(body.items);
+        resolve({data: obj, next: body.next});
+      } else {
+        resolve({data: obj, next: null});
+      }
+    });
+  }).then((res) => {
+    if (res.next == null) {
+      return res.data;
+    } else {
+      return fetchAllPagedItems(auth, res.next, res.data);
+    }
+  })
+}
+
+function fetchAllUnpagedItems(url, auth, chunks, obj, callback) {
+  return new Promise((resolve, reject) => {
+
+    var chunk = chunks.shift();
+
+    if (chunk == null) {
+      resolve({data: obj, next: null})
+    }
+
+    request.get({
+      url: url + querystring.stringify({ids: chunk.join(',')}),
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        callback(err, response, body, obj);
+        resolve({data: obj, next: chunks})
+      } else {
+        resolve({data: null, next: null})
+      }
+    });
+  }).then((res) => {
+    if (res.next == null) {
+      return res.data;
+    } else {
+      return fetchAllUnpagedItems(url, auth, res.next, res.data, callback);
+    }
+  });
+}
+
 module.exports = function(router) {
-  
-  router.get('/profile', function(req, res) {
-    var auth = res.locals.auth;
-    
-    request.get({
-      url: 'https://api.spotify.com/v1/me',
-      headers: { 'Authorization': 'Bearer ' + auth },
-      json: true
-    }, (err, response, body) => {
-      if (!err && response.statusCode == 200) {
-        res.send({
-          success: true,
-          data: body
-        })
-      } else {
-        res.send({
-          success: false,
-          message: 'error_retrieving_user_profile'
-        });
-      }
-    });
-  });
-
-  router.get('/playlist', function(req, res) {
-    var auth = res.locals.auth;
-
-    request.get({
-      url: 'https://api.spotify.com/v1/me/playlists',
-      headers: { 'Authorization': 'Bearer ' + auth },
-      json: true
-    }, (err, response, body) => {
-      if (!err && response.statusCode == 200) {
-        res.send({
-          success: true,
-          data: body
-        })
-      } else {
-        res.send({
-          success: false,
-          message: 'error_retrieving_user_playlists'
-        });
-      }
-    });
-  });
 
   router.get('/playlist/:id', function(req, res) {
     var auth = res.locals.auth;
@@ -58,11 +74,15 @@ module.exports = function(router) {
       json: true
     }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
-        
-        res.send({
-          success: true,
-          data: body
-        })
+        var tracks = body.tracks.items;
+        fetchAllPagedItems(auth, body.tracks.next, tracks).then((result) => {
+          body.tracks.items = result;
+          res.send({
+            success: true,
+            data: body
+          });
+        });
+
       } else {
         res.send({
           success: false,
@@ -75,87 +95,43 @@ module.exports = function(router) {
   router.get('/track-features', function(req, res) {
     var auth = res.locals.auth;
 
-    var query = Object.assign({}, req.query, {
-      ids: req.query.ids.join(',')
-    });
-    
-    request.get({
-      url: 'https://api.spotify.com/v1/audio-features/?' + querystring.stringify(query),
-      headers: { 'Authorization': 'Bearer ' + auth },
-      json: true
-    }, (err, response, body) => {
-      if (!err && response.statusCode == 200) {
+    var chunkedIds = [];
+    // remove duplicates
+    var uIds = [...new Set(req.query.ids)];
+    var i, l = uIds.length;
+    for (i = 0; i < l; i += CHUNK_SIZE) {
+      chunkedIds.push(uIds.slice(i, i + CHUNK_SIZE))
+    }
+    var trackFeatureData = {};
+
+    fetchAllUnpagedItems(
+      'https://api.spotify.com/v1/audio-features/?',
+      auth,
+      chunkedIds,
+      trackFeatureData,
+      (_err, _response, body, obj) => {
         // flatten out the data
-        let flattened_data = {};
         for (var i = 0; i < body.audio_features.length; ++i) {
           for (var feature in body.audio_features[i]) {
-            if (body.audio_features[i].hasOwnProperty(feature) && flattened_data.hasOwnProperty(feature)) {
-              flattened_data[feature].push(body.audio_features[i][feature]);
+            if (body.audio_features[i].hasOwnProperty(feature) && obj.hasOwnProperty(feature)) {
+              obj[feature].push(body.audio_features[i][feature]);
             } else {
-              flattened_data[feature] = [body.audio_features[i][feature]];
+              obj[feature] = [body.audio_features[i][feature]];
             }
           }
         }
-
-        res.send({
-          success: true,
-          data: flattened_data
-        })
-      } else {
+      }
+    ).then((result) => {
+      if (result == null) {
         res.send({
           success: false,
           message: 'error_retrieving_track_features_for_ids'
-        });
-      }
-    });    
-  });
-
-  router.get('/top/artists', function(req, res) {
-    var auth = res.locals.auth;
-
-    request.get({
-      url: 'https://api.spotify.com/v1/me/top/artists' + querystring.stringify(req.query),
-      headers: { 'Authorization': 'Bearer ' + auth },
-      json: true
-    }, (err, response, body) => {
-      if (!err && response.statusCode == 200) {
-        body.items.map((artist) => {
-          artist.image = artist.images[0];
-          delete artist['images'];
-          return artist;
-        });
-
-        res.send({
-          success: true,
-          data: { artists: body.items, next: body.next }
         })
       } else {
         res.send({
-          success: false,
-          message: 'error_retrieving_user_top_artists'
-        });
-      }
-    });
-  });
-
-  router.get('/top/tracks', function(req, res) {
-    var auth = res.locals.auth;
-
-    request.get({
-      url: 'https://api.spotify.com/v1/me/top/tracks' + querystring.stringify(req.query),
-      headers: { 'Authorization': 'Bearer ' + auth },
-      json: true
-    }, (err, response, body) => {
-      if (!err && response.statusCode == 200) {
-        res.send({
           success: true,
-          data: { tracks: body.items, next: body.next }
+          data: result
         })
-      } else {
-        res.send({
-          success: false,
-          message: 'error_retrieving_user_top_tracks'
-        });
       }
     });
   });
