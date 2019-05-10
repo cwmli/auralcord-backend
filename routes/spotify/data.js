@@ -10,7 +10,7 @@ const request = require('request');
 
 const CHUNK_SIZE = 100;
 
-function fetchPagingObj(auth, url, obj) {
+function fetchAllPagedItems(auth, url, obj) {
   return new Promise((resolve, reject) => {
     request.get({
       url: url,
@@ -24,17 +24,43 @@ function fetchPagingObj(auth, url, obj) {
         resolve({data: obj, next: null});
       }
     });
-  });
-}
-
-function recursiveFetchPagedItems(auth, url, obj) {
-  return fetchPagingObj(auth, url, obj).then((res) => {
+  }).then((res) => {
     if (res.next == null) {
       return res.data;
     } else {
-      return recursiveFetchPagedItems(auth, res.next, res.data);
+      return fetchAllPagedItems(auth, res.next, res.data);
     }
   })
+}
+
+function fetchAllUnpagedItems(url, auth, chunks, obj, callback) {
+  return new Promise((resolve, reject) => {
+
+    var chunk = chunks.shift();
+
+    if (chunk == null) {
+      resolve({data: obj, next: null})
+    }
+
+    request.get({
+      url: url + querystring.stringify({ids: chunk.join(',')}),
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        callback(err, response, body, obj);
+        resolve({data: obj, next: chunks})
+      } else {
+        resolve({data: null, next: null})
+      }
+    });
+  }).then((res) => {
+    if (res.next == null) {
+      return res.data;
+    } else {
+      return fetchAllUnpagedItems(url, auth, res.next, res.data, callback);
+    }
+  });
 }
 
 module.exports = function(router) {
@@ -49,7 +75,7 @@ module.exports = function(router) {
     }, (err, response, body) => {
       if (!err && response.statusCode == 200) {
         var tracks = body.tracks.items;
-        recursiveFetchPagedItems(auth, body.tracks.next, tracks).then((result) => {
+        fetchAllPagedItems(auth, body.tracks.next, tracks).then((result) => {
           body.tracks.items = result;
           res.send({
             success: true,
@@ -78,57 +104,24 @@ module.exports = function(router) {
     }
     var trackFeatureData = {};
 
-    // TODO: Probably want to clean this up later, but for now it will do
-    function fetchPagedTrackFeatures(auth, chunks, obj) {
-      return new Promise((resolve, reject) => {
-
-        var chunkIds = chunks.shift();
-
-        if (chunkIds == null) {
-          resolve({data: obj, next: null})
-        }
-
-        var query = Object.assign({}, {
-          ids: chunkIds.join(',')
-        });
-
-        request.get({
-          url: 'https://api.spotify.com/v1/audio-features/?' + querystring.stringify(query),
-          headers: { 'Authorization': 'Bearer ' + auth },
-          json: true
-        }, (err, response, body) => {
-          if (!err && response.statusCode == 200) {
-            // flatten out the data
-            for (var i = 0; i < body.audio_features.length; ++i) {
-              for (var feature in body.audio_features[i]) {
-                if (body.audio_features[i].hasOwnProperty(feature) && obj.hasOwnProperty(feature)) {
-                  obj[feature].push(body.audio_features[i][feature]);
-                } else {
-                  obj[feature] = [body.audio_features[i][feature]];
-                }
-              }
+    fetchAllUnpagedItems(
+      'https://api.spotify.com/v1/audio-features/?',
+      auth,
+      chunkedIds,
+      trackFeatureData,
+      (_err, _response, body, obj) => {
+        // flatten out the data
+        for (var i = 0; i < body.audio_features.length; ++i) {
+          for (var feature in body.audio_features[i]) {
+            if (body.audio_features[i].hasOwnProperty(feature) && obj.hasOwnProperty(feature)) {
+              obj[feature].push(body.audio_features[i][feature]);
+            } else {
+              obj[feature] = [body.audio_features[i][feature]];
             }
-
-            resolve({data: obj, next: chunks})
-          } else {
-            resolve({data: null, next: null})
           }
-        });
-      }); 
-    }
-
-    function recursiveFetchPagedTrackFeatures(auth, chunks, obj) {
-      return fetchPagedTrackFeatures(auth, chunks, obj).then((res) => {
-        if (res.next == null) {
-          return res.data;
-        } else {
-          return recursiveFetchPagedTrackFeatures(auth, res.next, res.data);
         }
-      });
-    }
-
-    recursiveFetchPagedTrackFeatures(auth, chunkedIds, trackFeatureData).then((result) => {
-
+      }
+    ).then((result) => {
       if (result == null) {
         res.send({
           success: false,
