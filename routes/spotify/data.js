@@ -69,10 +69,12 @@ module.exports = function(router) {
   router.get('/track-features', function(req, res) {
     var auth = res.locals.auth;
 
-    var chunkedIds = []
-    var i, l = req.query.ids.length;
+    var chunkedIds = [];
+    // remove duplicates
+    var uIds = [...new Set(req.query.ids)];
+    var i, l = uIds.length;
     for (i = 0; i < l; i += CHUNK_SIZE) {
-      chunkedIds.push(req.query.ids.slice(i, i + CHUNK_SIZE))
+      chunkedIds.push(uIds.slice(i, i + CHUNK_SIZE))
     }
     var trackFeatureData = {};
 
