@@ -65,6 +65,25 @@ function fetchAllUnpagedItems(url, auth, chunks, obj, callback) {
 
 module.exports = function(router) {
 
+  router.get('/recommendations', function(req, res) {
+    var auth = res.locals.auth;
+
+    request.get({
+      url: 'https://api.spotify.com/v1/recommendations' + req.query,
+      headers: { 'Authorization': 'Bearer ' + auth },
+      json: true
+    }, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        console.log(body);
+      } else {
+        res.send({
+          success: false,
+          message: 'error_retrieving_recommendations'
+        });
+      }
+    });
+  });
+
   router.get('/playlist/:id', function(req, res) {
     var auth = res.locals.auth;
 
